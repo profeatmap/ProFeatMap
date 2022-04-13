@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# python 3.9
+# python 3.9.5
 
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
@@ -939,34 +939,40 @@ def proteinListSorting(protein_list, data_dict, protein_length_dict=None, sortin
 		# Create DataFrame from dict containing number of each feature
 		df = pd.DataFrame.from_dict(feature_number_dict, orient='index')
 
+		# Create all combination of pairs of proteins
+		protein_comb = list(set(list(itertools.combinations(protein_list, 2))))
+		protein_comb.sort()
 
 		# Create similarity and dissimilarity dataframe
 		disim_dist_dict = {}
 		sim_dist_dict = {}
-		# For each protein in the list
+
 		for protein in protein_list :
 			# Initialize similarity and dissimilary dict for each protein
 			disim_dist_dict[protein] = {}
 			sim_dist_dict[protein] = {}
-			# Get data for reference protein
-			protein_data = list(df.loc[protein])
-			# For each protein to compare with
 			for vs_protein in protein_list :
-				# Get data for protein to compare with
-				vs_protein_data = list(df.loc[vs_protein])
 				# Initialize similarity and dissimilarity dict for compared protein to 0
 				disim_dist_dict[protein][vs_protein] = 0
-				sim_dist_dict[protein][vs_protein] = 0
-				# For each feature found in the list of protein
-				for item in zip(protein_data, vs_protein_data) :
-					# Get the number of the given feature
-					val_protein, val_vs_protein = item
-					# Add to the dissimilarity score the absolute value of the difference in number of the given feature
-					disim_dist_dict[protein][vs_protein] += abs(val_protein - val_vs_protein)
-					# If there is more than one feature for the two proteins
-					if val_protein > 0 and val_vs_protein > 0 :
-						# Add the number of common features to the similiarity score
-						sim_dist_dict[protein][vs_protein] += min(val_protein, val_vs_protein)
+				sim_dist_dict[protein][vs_protein] = 0					
+
+		# For each protein pairs in the list
+		for protein, vs_protein in protein_comb :
+			# Get data for reference protein
+			protein_data = list(df.loc[protein])
+			# Get data for protein to compare with
+			vs_protein_data = list(df.loc[vs_protein])
+			# For each feature found in the list of protein
+			for item in zip(protein_data, vs_protein_data) :
+				# Get the number of the given feature
+				val_protein, val_vs_protein = item
+
+				# Add to the dissimilarity score the absolute value of the difference in number of the given feature
+				disim_dist_dict[protein][vs_protein] += abs(val_protein - val_vs_protein)
+				# If there is more than one feature for the two proteins
+				if val_protein > 0 and val_vs_protein > 0 :
+					# Add the number of common features to the similiarity score
+					sim_dist_dict[protein][vs_protein] += min(val_protein, val_vs_protein)
 
 		# Create DataFrames from the similarity and dissimilarity dict
 		disim_dist_df = pd.DataFrame.from_dict(disim_dist_dict)
@@ -980,9 +986,6 @@ def proteinListSorting(protein_list, data_dict, protein_length_dict=None, sortin
 		max_sim = max(sim_dist_df.max())
 		max_disim = max(disim_dist_df.max())
 
-		# Create all combination of pairs of proteins
-		protein_comb = list(set(list(itertools.combinations(protein_list, 2))))
-		protein_comb.sort()
 
 		## Creating a list of priorities to link the proteins based on the content
 		# In order of priority : Similarity (descending) > Dissimilarity (ascending) > Sequence size difference (ascending)
@@ -1124,7 +1127,7 @@ def isUsed(serie_dict, protein) :
 				return (floor_id, i)
 	return False
 
-def drawFigure(protein_list_df, data_df, shape_df, protein_cut_df, protein_length_df, pdb_coverage_list, case, length_factor=0.2, height=800, text_size=5, sorting=None, focus=None, threshold=0.2, biased_region_text_size=4, draw_region=[], draw_coverage='False', draw_2nd_struct='False', draw_disorder='False', draw_mod_res='False', draw_protein_length='False', uniform=False, pensize=0, FT_order_list=['']) :
+def drawFigure(figure_code, legend_code, protein_list_df, data_df, shape_df, protein_cut_df, protein_length_df, pdb_coverage_list, case, length_factor=0.2, height=800, text_size=5, sorting=None, focus=None, threshold=0.2, biased_region_text_size=4, draw_region=[], draw_coverage='False', draw_2nd_struct='False', draw_disorder='False', draw_mod_res='False', draw_protein_length='False', uniform=False, pensize=0, FT_order_list=['']) :
 	"""
 		DESCRIPTION: Function handling all the map drawing process
 	"""
@@ -1632,21 +1635,19 @@ def drawFigure(protein_list_df, data_df, shape_df, protein_cut_df, protein_lengt
 		print('end of createFigure')
 		# print(im.size)
 
-		uuid_im = str(uuid.uuid4())
+		im.save(os.path.join('Figures', figure_code+'.png'), dpi=(600,600))
 
-		im.save(os.path.join('Figures', uuid_im+'.png'), dpi=(600,600))
+		children = html.Img(src=b64_image(os.path.join('Figures', figure_code+'.png')), style={'width' : '100%', 'display' : 'flex', 'align-items' : 'center', 'justify-content' : 'center'})
 
-		children = html.Img(src=b64_image(os.path.join('Figures', uuid_im+'.png')), style={'width' : '100%', 'display' : 'flex', 'align-items' : 'center', 'justify-content' : 'center'})
+		drawLegend(legend_code, pensize, height, text_size, shape_dict, length_factor, draw_region, biased_region_text_size, pdb_coverage_list)
 
-		uuid_legend = drawLegend(pensize, height, text_size, shape_dict, length_factor, draw_region, biased_region_text_size, pdb_coverage_list)
+		legend_children = html.Img(src=b64_image(os.path.join('Figures', legend_code+'.png')), style={'width' : '100%', 'display' : 'flex', 'align-items' : 'center', 'justify-content' : 'center'})
 
-		legend_children = html.Img(src=b64_image(os.path.join('Figures', uuid_legend+'.png')), style={'width' : '100%', 'display' : 'flex', 'align-items' : 'center', 'justify-content' : 'center'})
+		return children, legend_children, sorted_protein_list
 
-		return children, legend_children, uuid_im, uuid_legend, sorted_protein_list
+	return no_update, no_update, no_update
 
-	return no_update, no_update, no_update, no_update, no_update
-
-def drawLegend(pensize, height, text_size, shape_dict, length_factor, draw_region, biased_region_text_size, pdb_coverage_list) :
+def drawLegend(legend_code, pensize, height, text_size, shape_dict, length_factor, draw_region, biased_region_text_size, pdb_coverage_list) :
 	"""
 		DESCRIPTION: Function handling all the legend drawing process
 	"""
@@ -1789,10 +1790,8 @@ def drawLegend(pensize, height, text_size, shape_dict, length_factor, draw_regio
 					for tick in range(50+max_text_w+plot_x_pos + int(200* length_factor) + (int(height*8)+50)*j + 50, 50+max_text_w+plot_x_pos + int(200* length_factor) + (height*8+50)*j + 50 + height*8 + 1, int(height*8/10)) :
 						draw.line([(tick, plot_y_pos), (tick, plot_y_pos+int(height/8))], fill='black', width=pensize, joint='curve')
 
-	uuid_legend = str(uuid.uuid4())
-	im.save(os.path.join('Figures', uuid_legend+'.png'), 'PNG')
+	im.save(os.path.join('Figures', legend_code+'.png'), 'PNG')
 
-	return uuid_legend
 
 def drawShape(draw, x_pos, y_pos, dom_dict, BI=None, biased_region_text=None, biased_region_text_size=None) :
 	"""
@@ -1912,7 +1911,7 @@ def findData(case_list, feature_list, intensity_data, db_PDB, features_df):
 
 def loadIntensities(case_list, feature_list, intensity_data, db_PDB, with_feature_name=False) :
 	"""
-		DESCRIPTION: Reading numerical values of the 3D structure coverage and user (optionnal) and tranforming it into a dict.
+		DESCRIPTION: Reading numerical values of the 3D structure coverage and user (optional) and tranforming it into a dict.
 	"""
 
 	data_dict = {}
@@ -2236,28 +2235,30 @@ def proteinDataGathering(complete_protein_list_df, dl_latest=None, uniprot_avail
 				not_dled_df.loc[not_dled_df_i] = [protein]
 				not_dled_df_i += 1
 
-		updateUniprotDBData(uniprot_db)
+				del uniprot_db[protein]
 
-		obsolete_df = pd.DataFrame(columns=['Obsolete code'])
-		obsolete_df_i = 0
 		for protein in protein_list :
 			# print(protein)
 			# print(list(not_dled_df['Unrecognized code']))
 			if protein not in list(not_dled_df['Unrecognized code']) :
 				file = protein.strip() + ".txt"
 				if os.path.getsize(os.path.join('Uniprot_files', file)) == 0 :
-					obsolete_df.loc[obsolete_df_i] = [protein]
-					obsolete_df_i += 1
+					not_dled_d.loc[obsolete_df_i] = [protein]
+					not_dled_df_i += 1
+
+					del uniprot_db[protein]
+
+		updateUniprotDBData(uniprot_db)
 
 		# HAS to check of obsolete codes even if file already exists
 
 		# print(obsolete_df)
 		# print(not_dled_df)
 
-		obsolete_data = obsolete_df.to_json(date_format='iso', orient='split')
 		unrecognized_data = not_dled_df.to_json(date_format='iso', orient='split')
-		if obsolete_df_i != 0 or not_dled_df_i != 0 :
-			return obsolete_data, unrecognized_data, {'display': 'block'}, b64_image(os.path.join('GUI', 'fail'+'.png')), None, None
+
+		if not_dled_df_i != 0 :
+			return no_update, unrecognized_data, {'display': 'block'}, b64_image(os.path.join('GUI', 'fail'+'.png')), None, None
 		else :
 			if uniprot_availability_test == False :
 				missing_protein_names = False
@@ -2270,7 +2271,7 @@ def proteinDataGathering(complete_protein_list_df, dl_latest=None, uniprot_avail
 					protein_list_df['protein'] = protein_name_list
 					print(protein_list_df)
 
-				return obsolete_data, unrecognized_data, {'display': 'none'}, b64_image(os.path.join('GUI', 'success'+'.png')), missing_protein_names, protein_list_df
+				return None, unrecognized_data, {'display': 'none'}, b64_image(os.path.join('GUI', 'success'+'.png')), missing_protein_names, protein_list_df
 			else :
 				return None, None, {'display': 'none'}, b64_image(os.path.join('GUI', 'success'+'.png')), None, None
 
@@ -2657,6 +2658,8 @@ app.layout = html.Div([
 	# Data storage
 	dcc.Store(id='Step_1', storage_type=storage_type),
 	dcc.Store(id='file_download_prog_perc', storage_type=storage_type),
+
+	dcc.Store(id='step_1_pending_code', storage_type=storage_type),
 	# Step 2 Input Store
 	dcc.Store(id='Step_2_exceptions', storage_type=storage_type),
 	# Step 2_to_3  Store
@@ -2685,6 +2688,8 @@ app.layout = html.Div([
 	dcc.Store(id='Step_4_pdb_coverage_list', storage_type=storage_type),
 	dcc.Store(id='Step_4_pdb_coverage_steps', storage_type=storage_type),
 	dcc.Store(id='Step_4_parameters', storage_type=storage_type),
+
+	dcc.Store(id='step_4_pending_code', storage_type=storage_type),
 
 	dcc.Store(id='Sorted_protein_list', storage_type=storage_type),
 	dcc.Store(id='Figure_code', storage_type=storage_type),
@@ -2836,7 +2841,7 @@ app.layout = html.Div([
 								width={'size': 1},
 								),
 								dbc.Col([
-									html.H4('Skip Step 3 and go directly to Step 4. Under the Shapes and colors table, click on the AUTOMATIC feature selection and save the changes.', style={'text-align':'left'}),
+									html.H4('Skip Step 3 and go directly to Step 4. Above the Shapes and colors table, click on the AUTOMATIC feature selection button.', style={'text-align':'left'}),
 								],
 								width={'size': 9},
 								),
@@ -2932,9 +2937,9 @@ app.layout = html.Div([
 						width={'size': 1},
 					),
 					dbc.Col([
-							html.H4('This first step needs a list of proteins, with their Uniprot accession code and a unique protein name.'),
+							html.H4('Needs a list of proteins, as Uniprot accession codes and unique protein names.'),
 							html.H4('ProFeatMap will retrieve data from Uniprot based on these codes.'),
-							html.H4('The name given for the proteins will be used as identifier and will appear on the final map.'),
+							html.H4('Protein names are used as identifiers and will appear on the final map.'),
 						],
 						width={'size': 10},
 					),
@@ -3352,7 +3357,7 @@ app.layout = html.Div([
 								dbc.Col([
 									html.Div(
 										children=[
-											html.Div(html.Img(src=b64_image(os.path.join('GUI', 'run'+'.png')), style={'width':'4vh', 'height':'4vh'}), style={'position':'absolute'}),
+											html.Div(html.Img(src=b64_image(os.path.join('GUI', 'quick_run'+'.png')), style={'width':'4vh', 'height':'4vh'}), style={'position':'absolute'}),
 											html.Div(dbc.Button(id='step_1_launch_button', style={'background-color':'transparent', 'width':'4vh', 'height':'4vh'}), style={'position':'absolute'}),
 											dbc.Tooltip(
 													'Start protein data gathering',
@@ -3393,8 +3398,8 @@ app.layout = html.Div([
 						width={'size': 1, 'offset':2}
 					),
 					dbc.Col([
-							html.H4(children='Some Uniprot codes are found to be obsolete.', style={'color': '#a50104', 'margin-top':'1vh'}),
-							html.H4(children='Please remove or replace them, then rerun Step 1.', style={'color': '#a50104'}),
+							html.H4(children='Some data could not be downloaded.', style={'color': '#a50104', 'margin-top':'1vh'}),
+							html.H4(children='Please remove or replace correspondign codes, then rerun Step 1.', style={'color': '#a50104'}),
 							html.H4(children='Download the concerned list with the button below.')
 						],
 						width={'size': 6, 'offset':3}
@@ -3521,9 +3526,9 @@ app.layout = html.Div([
 						width={'size': 1},
 					),
 					dbc.Col([
-							html.H4('Once data is properly gathered from the Uniprot database, ProFeatMap will proceed to the feature extraction.'),
-							html.H4('Results of the extraction can be downloaded as an Excel file, with the Download button.'),
-							html.H4('Modification of the extraction can be made by providing an exception file.'),
+							html.H4('After Uniprot retrieving, ProFeatMap proceeds to the feature extraction.'),
+							html.H4('Extraction results can be downloaded as an Excel file, with the Download button.'),
+							html.H4('Modification file can be used to modify the extraction, see examples.'),
 						],
 						width={'size': 10},
 					),
@@ -4238,7 +4243,7 @@ app.layout = html.Div([
 				children=[
 				html.Div(html.Img(src=b64_image(os.path.join('GUI', 'gold'+'.png')), style={'width':'100vw', 'height':'8vh'}), style={'position':'absolute', 'left':0}),
 				html.Div([
-					html.H2('Step 3: Numerical values addition', style={'text-align':'center', 'width':'100vw', 'margin-top':'1vh', 'color':'black'}),
+					html.H2('Step 3: Numerical values addition (optional)', style={'text-align':'center', 'width':'100vw', 'margin-top':'1vh', 'color':'black'}),
 					],
 					style={'position':'absolute', 'left':0}
 				),
@@ -4266,8 +4271,7 @@ app.layout = html.Div([
 					),
 					dbc.Col([
 							html.H3('This step is optional.'),
-							html.H4('Unless you have numerical values you want to display on one or more feature.'),
-							html.H4('If so, you will have to provide a file containing these values.'),
+							html.H4('[When numerical values to be displayed are available.]'), 
 						],
 						width={'size': 10},
 					),
@@ -4598,10 +4602,10 @@ app.layout = html.Div([
 						width={'size': 1},
 					),
 					dbc.Col([
-							html.H4('This last step will create a map and the according legend.'),
-							html.H4('You have to specify a shape for each feature you want to appear on the map in the Feature shapes section.'),
-							html.H4('You can let ProFeatMap choose for you by using the Automatic feature select button.'),
-							html.H4('You can then change the general figure and feature parameters to explore your protein list.'),
+							html.H4('Creates map and legend.'),
+							html.H4('Specify "Shapes and colors" for each feature to appear on the map.'),
+							html.H4('Can be done automatically with the "AUTOMATIC feature selection" button.'),
+							html.H4('Map parameters can be changed.'),
 						],
 						width={'size': 10},
 					),
@@ -4724,7 +4728,7 @@ app.layout = html.Div([
 																			target='step_4_auto_feat_select_div',
 																			placement='bottom',
 																			style={'font-size':tooltip_font_size}
-																		)
+																	)
 																],
 																style={'position':'relative'})
 															],
@@ -5555,7 +5559,8 @@ app.layout = html.Div([
 								dbc.Col([
 									html.H4('Feature parameters', style={'text-align':'center'}),
 									dbc.Row(
-										[
+										id='coverage_row',
+										children=[
 											dbc.Col([
 												html.H5('3D structure coverage', style={'text-align':'right'}),
 											],
@@ -5572,10 +5577,17 @@ app.layout = html.Div([
 											],
 											width={'size': 6},
 											),
+											dbc.Tooltip(
+													'Displays as a colored line under the protein the number of resolved 3D structures (PDB)',
+													target='coverage_row',
+													placement='bottom',
+													style={'font-size':tooltip_font_size}
+											)
 										]
 									),
 									dbc.Row(
-										[
+										id='secondary_row',
+										children=[
 											dbc.Col([
 												html.H5('Secondary structure', style={'text-align':'right'}),
 											],
@@ -5592,10 +5604,17 @@ app.layout = html.Div([
 											],
 											width={'size': 6},
 											),
+											dbc.Tooltip(
+													'Displays secondary structure (if any) of the proteins',
+													target='secondary_row',
+													placement='bottom',
+													style={'font-size':tooltip_font_size}
+											)
 										]
 									),
 									dbc.Row(
-										[
+										id='disorder_row',
+										children=[
 											dbc.Col([
 												html.H5('Disorder', style={'text-align':'right'}),
 											],
@@ -5612,10 +5631,17 @@ app.layout = html.Div([
 											],
 											width={'size': 6},
 											),
+											dbc.Tooltip(
+													'Displays predicted disordered regions of proteins',
+													target='disorder_row',
+													placement='bottom',
+													style={'font-size':tooltip_font_size}
+											)
 										]
 									),
 									dbc.Row(
-										[
+										id='mod_res_row',
+										children=[
 											dbc.Col([
 												html.H5('Modified residues', style={'text-align':'right'}),
 											],
@@ -5632,10 +5658,17 @@ app.layout = html.Div([
 											],
 											width={'size': 6},
 											),
+											dbc.Tooltip(
+													'Displays post-translational modifications positions on proteins',
+													target='mod_res_row',
+													placement='bottom',
+													style={'font-size':tooltip_font_size}
+											)
 										]
 									),
 									dbc.Row(
-										[
+										id='biased_row',
+										children=[
 											dbc.Col([
 												html.H5('Composition biased regions', style={'text-align':'right'}),
 											],
@@ -5659,6 +5692,12 @@ app.layout = html.Div([
 											],
 											width={'size': 6},
 											),
+											dbc.Tooltip(
+													'Displays with biased composition on proteins. Select one or more types of biases',
+													target='biased_row',
+													placement='bottom',
+													style={'font-size':tooltip_font_size}
+											)
 										],
 									),
 									dbc.Row(
@@ -5669,7 +5708,8 @@ app.layout = html.Div([
 											dbc.Col(
 												children=[
 												dbc.Row(
-													[
+													id='parameters_default_row',
+													children=[
 														dbc.Col([
 															html.H5('Feature parameters defaults', style={'text-align':'right'}),
 															],
@@ -5685,6 +5725,12 @@ app.layout = html.Div([
 															],
 															width={'size': 6},
 														),
+														dbc.Tooltip(
+																'Adds to the Shapes and colors table (at the end) all default representation of currently selected feature parameters.',
+																target='parameters_default_row',
+																placement='bottom',
+																style={'font-size':tooltip_font_size}
+														)
 													]
 												)
 												],
@@ -6211,16 +6257,13 @@ def download_uniprot_files(n, clear, parameters):
 
 	prevent_initial_call=True
 	)
-def download_uniprot_files(button_click, sorted_list, sorting, data):
-	if sorted_list == None :
-		sorted_list = []
+def download_uniprot_files(button_click, sorted_list_data, sorting, data):
+	if sorted_list_data == None :
+		sorted_list_data = {}
 
-	protein_list_df = pd.read_json(data, orient='split')
+	protein_list_df = pd.read_json(sorted_list_data, orient='split')
 
-	df = protein_list_df.set_index('protein', drop=False)
-	df = df.loc[sorted_list]
-
-	return send_data_frame(df.to_excel, filename=sorting+'.xlsx', index=False)
+	return send_data_frame(protein_list_df.to_excel, filename=sorting+'.xlsx', index=False)
 
 @app.callback(
 	Output('parameters_download', 'data'),
@@ -6342,7 +6385,7 @@ def download_uniprot_files(button_click, parameters):
 	else :
 		df.loc[df_i] = ['Modified residues', 'Yes']
 		df_i += 1
-	if parameters['Composition biased regions'] == None or parameters['Composition biased regions'] == [] :
+	if parameters['Composition biased regions'] == None or parameters['Composition biased regions'] == 'None' or parameters['Composition biased regions'] == [] :
 		df.loc[df_i] = ['Composition biased regions', None]
 		df_i += 1
 	else :
@@ -6541,7 +6584,7 @@ def update_output(placeholder):
 	prevent_initial_call=True,
 	)
 def update_output(placeholder):
-	return dcc.send_file(os.path.join('Examples', 'TRIO_protein_list'+'.xlsx'))
+	return dcc.send_file(os.path.join('Examples', 'PDZ_protein_list'+'.xlsx'))
 
 # Modifications example download
 @app.callback(
@@ -6558,7 +6601,7 @@ def update_output(placeholder):
 	prevent_initial_call=True,
 	)
 def update_output(placeholder):
-	return dcc.send_file(os.path.join('Examples', 'TRIO_modifications'+'.xlsx'))
+	return dcc.send_file(os.path.join('Examples', 'PDZ_modifications'+'.xlsx'))
 
 # Numerical values example downloads
 @app.callback(
@@ -6575,7 +6618,7 @@ def update_output(placeholder):
 	prevent_initial_call=True,
 	)
 def update_output(placeholder):
-	return dcc.send_file(os.path.join('Examples', 'TRIO_numerical_values'+'.xlsx'))
+	return dcc.send_file(os.path.join('Examples', 'PDZ_numerical_values'+'.xlsx'))
 
 # Shapes and colors example downloads
 @app.callback(
@@ -6592,7 +6635,7 @@ def update_output(placeholder):
 	prevent_initial_call=True,
 	)
 def update_output(placeholder):
-	return dcc.send_file(os.path.join('Examples', 'TRIO_shapes_and_colors'+'.xlsx'))
+	return dcc.send_file(os.path.join('Examples', 'PDZ_shapes_and_colors'+'.xlsx'))
 
 # Cur regions example downloads
 @app.callback(
@@ -6609,7 +6652,7 @@ def update_output(placeholder):
 	prevent_initial_call=True,
 	)
 def update_output(placeholder):
-	return dcc.send_file(os.path.join('Examples', 'TRIO_cut_regions'+'.xlsx'))
+	return dcc.send_file(os.path.join('Examples', 'PDZ_cut_regions'+'.xlsx'))
 
 
 @app.callback(
@@ -6618,13 +6661,11 @@ def update_output(placeholder):
 	)
 def update_output(placeholder):
 	print('Checking Uniprot availability')
-	obsolete_data, unrecognized_data, show_obsolete, state_src, missing_protein_names, protein_list_df = proteinDataGathering(['P04637'], dl_latest=True, uniprot_availability_test=True)
+	obsolete_data, unrecognized_data, show_obsolete, state_src, missing_protein_names, protein_list_df = proteinDataGathering(['P04637'], dl_latest=['latest'], uniprot_availability_test=True)
 	return state_src
 
 # Protein list datatable management
 @app.callback(
-
-
 	Output('protein_list_datatable_div', 'children'),
 	Output('protein_list_datatable', 'data'),
 	Output('step_1_height', 'style'),
@@ -6659,6 +6700,8 @@ def update_output(placeholder):
 	State('Step_1', 'data'),
 
 	State('dl_latest_toggle', 'value'),
+
+	State('step_1_pending_code', 'data'),
 )
 def update_output(
 	data,
@@ -6679,7 +6722,8 @@ def update_output(
 	filename,
 	protein_list_stored,
 
-	dl_latest
+	dl_latest,
+	pending_code
 	):
 	ctx = dash.callback_context
 	triggered = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -6706,8 +6750,40 @@ def update_output(
 	elif triggered == 'Step_1' :
 
 		if data == None :
+			
+			column_names = ['code', 'protein']
 
-			children = html.Div(dash_table.DataTable(id='protein_list_datatable'))
+			data_table_data = pd.DataFrame(columns=column_names)
+
+			header_color = 'rgb(125, 111, 134)'
+			header_font_color = 'white'
+
+			children = html.Div(
+				dash_table.DataTable(
+					id='protein_list_datatable',
+					data=[{elem:'' for elem in column_names}],
+					columns=[{'name': i, 'id': i} for i in data_table_data.columns],
+					style_header={
+						'backgroundColor': header_color,
+						'fontWeight': 'bold',
+						'color': header_font_color
+					},
+					style_cell={
+						'backgroundColor': 'rgb(34,34,34)',
+						'color': 'white',
+						'minWidth': '150px', 'width': '150px', 'maxWidth': '150px',
+						'overflow': 'hidden',
+						'textOverflow': 'ellipsis',
+					},
+					page_size=20,
+					editable=True,
+					row_deletable=True,
+					fixed_columns={'headers': True, 'data': 2},
+					style_table={'minWidth': '100%', 'maxWidth': '100%'},
+				),
+			)
+
+			return children, no_update, {'width':'100%', 'height':str(int(2*1.7)+30)+'vh'}, no_update, no_update, no_update, no_update, need_save, no_update, no_update, no_update, no_update, no_update
 
 		else :
 			df = pd.read_json(data, orient='split')
@@ -6737,7 +6813,75 @@ def update_output(
 				),
 			)
 
-		return children, no_update, {'width':'100%', 'height':str(int(min(len(df.index),25)*1.7)+30)+'vh'}, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
+			if pending_code != None :
+				print('Step_1 returning pending results')
+
+				finished_process = False
+				missing_protein_names = False
+
+				if os.path.exists(os.path.join('Pending_downloads', pending_code+'.csv')) :
+					finished_process = True
+
+					unrecognized_df = pd.read_csv(os.path.join('Pending_downloads', pending_code+'.csv'), sep='\t')
+
+					if len(unrecognized_df.index) > 0 :
+						unrecognized_data = unrecognized_df.to_json(date_format='iso', orient='split')
+
+						state_src = b64_image(os.path.join('GUI', 'fail'+'.png'))
+						show_obsolete = {'display': 'block'}
+
+					else :
+						unrecognized_data = no_update
+
+						state_src = b64_image(os.path.join('GUI', 'success'+'.png'))
+						show_obsolete = {'display': 'none'}
+
+					os.remove(os.path.join('Pending_downloads', pending_code+'.csv'))
+
+					return children, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, unrecognized_data, show_obsolete, state_src
+
+				if os.path.exists(os.path.join('Pending_downloads', 'names'+'_'+pending_code+'.csv')) :
+					missing_protein_names = True
+					updated_list_df = pd.read_csv(os.path.join('Pending_downloads', 'names'+'_'+pending_code+'.csv'), sep='\t')
+
+					datatable_children = html.Div(
+						dash_table.DataTable(
+							id='protein_list_datatable',
+							data=updated_list_df.to_dict('records'),
+							columns=[{'name': i, 'id': i} for i in updated_list_df.columns],
+							style_header={
+								'backgroundColor': 'rgb(125, 111, 134)',
+								'fontWeight': 'bold',
+								'color': 'white'
+							},
+							style_cell={
+								'backgroundColor': 'rgb(34, 34, 34)',
+								'color': 'white',
+								'minWidth': '150px', 'width': '150px', 'maxWidth': '150px',
+								'overflow': 'hidden',
+								'textOverflow': 'ellipsis',
+							},
+							page_size=20,
+							editable=True,
+							row_deletable=True,
+							fixed_columns={'headers': True, 'data': 2},
+							style_table={'minWidth': '100%', 'maxWidth': '100%'},
+						),
+					)
+
+					os.remove(os.path.join('Pending_downloads', 'names'+'_'+pending_code+'.csv'))
+
+					return datatable_children, no_update, no_update, updated_list_df.to_json(date_format='iso', orient='split'), no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
+
+				if finished_process == False :
+					state_src = no_update
+					if os.path.exists(os.path.join('Pending_downloads', pending_code+'.txt')) :
+						state_src = b64_image(os.path.join('GUI', 'pending'+'.png'))
+
+					return children, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, state_src
+
+			else :
+				return children, no_update, {'width':'100%', 'height':str(int(min(len(df.index),25)*1.7)+30)+'vh'}, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
 
 	elif triggered == 'protein_list_clear' :
 
@@ -6779,7 +6923,7 @@ def update_output(
 
 		modified_df = pd.DataFrame.from_dict(protein_list_data)
 
-		if len(list(modified_df['protein'])) != len(list(set(list(modified_df['protein'])))) :
+		if 'protein' in list(modified_df) and len(list(modified_df['protein'])) != len(list(set(list(modified_df['protein'])))) :
 			# if duplicate names
 			children = [
 				html.Img(src=b64_image(os.path.join('GUI', 'warning'+'.png')), style={'width':'6vh', 'height':'6vh'}),
@@ -6927,6 +7071,17 @@ def update_output(
 		end_time = time.time()
 		print('Step 1 execution time:', str(end_time - start_time))
 
+
+		if pending_code != None :
+			unrecognized_data_df = pd.read_json(unrecognized_data, orient='split')
+				
+			unrecognized_data_df.to_csv(os.path.join('Pending_downloads', pending_code+'.csv'), sep='\t', index=False)
+			os.remove(os.path.join('Pending_downloads', pending_code+'.txt'))
+
+			if missing_protein_names :
+				protein_list_df.to_csv(os.path.join('Pending_downloads', 'names'+'_'+pending_code+'.csv'), sep='\t', index=False)
+
+
 		if missing_protein_names :
 			datatable_children = html.Div(
 				dash_table.DataTable(
@@ -6966,11 +7121,31 @@ def update_output(
 # Step 1 enter
 @app.callback(
 	Output('step_1_start_state', 'children'),
+	Output('step_1_pending_code', 'data'),
+
 	Input('step_1_launch_button', 'n_clicks'),
+	State('Step_1', 'data'),
+
 	prevent_initial_call=True
 	)
-def download_uniprot_files(button_press):
-	return html.Img(id='step_1_end_state', src=b64_image(os.path.join('GUI', 'fail'+'.png')), style={'width':'4vh', 'height':'4vh'})
+def download_uniprot_files(button_press, sorted_protein_list):
+	protein_list_df = pd.read_json(sorted_protein_list, orient='split')
+
+	unique_protein_list = list(set(protein_list_df['code']))
+
+	if len(unique_protein_list) > 5 :
+		step_1_pending_code = str(uuid.uuid4())
+
+		if not os.path.exists('Pending_downloads') :
+			print('Creating Pending_downloads folder')
+			os.mkdir('Pending_downloads')
+
+		output = open(os.path.join('Pending_downloads', step_1_pending_code+'.txt'), 'w')
+		output.close()
+
+		return html.Img(id='step_1_end_state', src=b64_image(os.path.join('GUI', 'pending'+'.png')), style={'width':'4vh', 'height':'4vh'}), step_1_pending_code
+
+	return html.Img(id='step_1_end_state', src=b64_image(os.path.join('GUI', 'fail'+'.png')), style={'width':'4vh', 'height':'4vh'}), no_update
 
 # Exception datatable management
 @app.callback(
@@ -7036,7 +7211,34 @@ def update_output(
 
 		if data == None :
 
-			children = html.Div(dash_table.DataTable(id='exception_datatable'))
+			df = pd.DataFrame(columns=['ex_type', 'protein', 'feature_type', 'feature', 'start', 'length'])
+
+			children = html.Div(
+				dash_table.DataTable(
+					id='exception_datatable',
+					data=df.to_dict('records'),
+					columns=[{'name': i, 'id': i} for i in df.columns],
+					style_header={
+						'backgroundColor': 'rgb(231, 215, 193)',
+						'fontWeight': 'bold',
+						'color': 'black'
+					},
+					style_cell={
+						'backgroundColor': 'rgb(34, 34, 34)',
+						'color': 'white',
+						'minWidth': '150px', 'width': '150px', 'maxWidth': '150px',
+						'overflow': 'hidden',
+						'textOverflow': 'ellipsis',
+					},
+					page_size=20,
+					editable=True,
+					row_deletable=True,
+					fixed_columns={'headers': True, 'data': 0},
+					style_table={'minWidth': '100%', 'maxWidth': '100%'},
+				),
+			)
+
+			return children, no_update, {'width':'100%', 'height':str(int(min(len(df.index),25)*1.7)+30)+'vh'}, no_update, no_update, no_update, no_update			
 
 		else :
 			df = pd.read_json(data, orient='split')
@@ -7231,7 +7433,40 @@ def update_output(
 
 		if data == None :
 
-			children = html.Div(dash_table.DataTable(id='values_datatable'))
+			column_names = ['protein', 'feature', 'start']
+
+			data_table_data = pd.DataFrame(columns=column_names)
+
+			header_color = 'rgb(223, 170, 24)'
+			header_font_color = 'black'
+
+			children = html.Div(
+				dash_table.DataTable(
+					id='values_datatable',
+					data=[{elem:'' for elem in column_names}],
+					columns=[{'name': i, 'id': i} for i in data_table_data.columns],
+					style_header={
+						'backgroundColor': header_color,
+						'fontWeight': 'bold',
+						'color': header_font_color
+					},
+					style_cell={
+						'backgroundColor': 'rgb(34,34,34)',
+						'color': 'white',
+						'minWidth': '150px', 'width': '150px', 'maxWidth': '150px',
+						'overflow': 'hidden',
+						'textOverflow': 'ellipsis',
+					},
+					page_size=20,
+					editable=True,
+					row_deletable=True,
+					fixed_columns={'headers': True, 'data': 0},
+					style_table={'minWidth': '100%', 'maxWidth': '100%'},
+				),
+			)
+
+			return children, no_update, {'width':'100%', 'height':str(int(2*1.7)+30)+'vh'}, no_update, no_update, no_update, need_save
+
 
 		else :
 			df = pd.read_json(data, orient='split')
@@ -7464,9 +7699,37 @@ def update_output(
 	elif triggered == 'Step_3_feature_shape' :
 		if data == None :
 
-			children = html.Div(dash_table.DataTable(id='feature_shape_datatable'))
+			df = pd.DataFrame(columns=['feature', 'shape', 'orientation', 'height', 'contour_color', 'contour_colormap', 'contour_threshold', 'color', 'colormap', 'threshold', 'pensize'])
+
+			children = html.Div(
+				dash_table.DataTable(
+					id='feature_shape_datatable',
+					data=df.to_dict('records'),
+					columns=[{'name': i, 'id': i} for i in df.columns],
+					style_header={
+						'backgroundColor': 'rgba(148,163,188)',
+						'fontWeight': 'bold',
+						'color': 'black'
+					},
+					style_cell={
+						'backgroundColor': 'rgb(34, 34, 34)',
+						'color': 'white',
+						'minWidth': '150px', 'width': '150px', 'maxWidth': '150px',
+						'overflow': 'hidden',
+						'textOverflow': 'ellipsis',
+					},
+					page_size=20,
+					editable=True,
+					row_deletable=True,
+					fixed_columns={'headers': True, 'data': 1},
+					style_table={'minWidth': '100%', 'maxWidth': '100%'},
+				),
+			)
+
 			autoed = need_auto
 			autoed_text = need_auto_text
+
+			return children, no_update, {'width':'100%', 'height':str(int(min(len(df.index),25)*1.7)+30)+'vh'}, no_update, no_update, no_update, no_update, no_update, autoed, autoed_text
 
 		else :
 			df = pd.read_json(data, orient='split')
@@ -7580,7 +7843,7 @@ def update_output(
 			),
 		)
 
-		return children, no_update, {'width':'100%', 'height':str(int(min(len(df.index),25)*1.7)+30)+'vh'}, no_update, no_update, no_update, need_save, new_seed, autoed, autoed_text
+		return children, no_update, {'width':'100%', 'height':str(int(min(len(df.index),25)*1.7)+30)+'vh'}, shape_df.to_json(date_format='iso', orient='split'), no_update, no_update, saved, new_seed, autoed, autoed_text
 
 	elif triggered == 'feature_shape_changes_save' :
 
@@ -7709,7 +7972,7 @@ def update_output(
 			),
 		)
 
-		return children, no_update, {'width':'100%', 'height':str(int(min(len(df.index),25)*1.7)+30)+'vh'}, no_update, no_update, no_update, need_save, no_update, no_update, no_update
+		return children, no_update, {'width':'100%', 'height':str(int(min(len(df.index),25)*1.7)+30)+'vh'}, df.to_json(date_format='iso', orient='split'), no_update, no_update, saved, no_update, no_update, no_update
 
 	elif datatable_click != None and datatable_click > 0 :
 		return no_update, no_update, no_update, no_update, no_update, no_update, need_save, no_update, no_update, no_update
@@ -7782,7 +8045,34 @@ def update_output(
 
 		if data == None :
 
-			children = html.Div(dash_table.DataTable(id='protein_cut_datatable'))
+			df = pd.DataFrame(columns=['protein', 'start', 'length'])
+
+			children = html.Div(
+				dash_table.DataTable(
+					id='protein_cut_datatable',
+					data=df.to_dict('records'),
+					columns=[{'name': i, 'id': i} for i in df.columns],
+					style_header={
+						'backgroundColor': 'rgba(148,163,188)',
+						'fontWeight': 'bold',
+						'color': 'black'
+					},
+					style_cell={
+						'backgroundColor': 'rgba(34,34,34)',
+						'color': 'white',
+						'minWidth': '150px', 'width': '150px', 'maxWidth': '150px',
+						'overflow': 'hidden',
+						'textOverflow': 'ellipsis',
+					},
+					page_size=20,
+					editable=True,
+					row_deletable=True,
+					fixed_columns={'headers': True, 'data': 1},
+					style_table={'minWidth': '100%', 'maxWidth': '100%'},
+				),
+			)
+
+			return children, no_update, df.to_json(date_format='iso', orient='split'), no_update, no_update, no_update
 
 		else :
 			df = pd.read_json(data, orient='split')
@@ -7940,18 +8230,12 @@ def update_output(n_clicks, QR_Figure_code, QR_Legend_code) :
 @app.callback(
 	Output('obsolete_code_download', 'data'),
 	Input('obsolete_code_download_btn', 'n_clicks'),
-	State('obsolete_list', 'data'),
 	State('unrecognized_list', 'data'),
 	prevent_initial_call=True
 	)
-def update_output(n_clicks, obsolete_list, unrecognized_list) :
-
+def update_output(n_clicks, unrecognized_list) :
 
 	writer = pd.ExcelWriter('Uniprot_code_errors.xlsx', engine='xlsxwriter')
-
-	df = pd.read_json(obsolete_list, orient='split')
-	# print(df)
-	df.to_excel(writer, sheet_name='obsolete', index=False)
 
 	df = pd.read_json(unrecognized_list, orient='split')
 	# print(df)
@@ -8263,24 +8547,44 @@ def update_output(data):
 	Output('step_2_start_state', 'children'),
 	Output('step_3_start_state', 'children'),
 
+	Output('2_to_4_protein_length', 'storage_type'),
+	Output('2_to_3_features', 'storage_type'),
+	Output('2_to_3_pdb_list', 'storage_type'),
+	Output('Step_4_feature_occurrence', 'storage_type'),
+	Output('2_to_3_protein_seq', 'storage_type'),	
+
 	Input('step_2_launch_button', 'n_clicks'),
 	Input('step_3_launch_button', 'n_clicks'),
 
+	State('Step_1', 'data'),
+
 	prevent_initial_call=True
 	)
-def download_uniprot_files(button_press, button_press_2):
+def download_uniprot_files(button_press, button_press_2, protein_list_data):
 
 	ctx = dash.callback_context
 	triggered = ctx.triggered[0]['prop_id'].split('.')[0]
 	print("TRIGERED: "+triggered)
 
 	if triggered == 'step_2_launch_button' :
+		state_img = html.Img(id='step_2_end_state', src=b64_image(os.path.join('GUI', 'fail'+'.png')), style={'width':'4vh', 'height':'4vh'})
 
-		return html.Img(id='step_2_end_state', src=b64_image(os.path.join('GUI', 'fail'+'.png')), style={'width':'4vh', 'height':'4vh'}), no_update
+		protein_list_df = pd.read_json(protein_list_data, orient='split')
+
+		global storage_type
+		if len(protein_list_df.index) >= 500 :
+			print('Changing memory type to "memory"')
+			new_storage_type = 'memory'
+		else :
+			print('Using default storage type:', storage_type)
+			new_storage_type = storage_type
+
+		return state_img, no_update, new_storage_type, new_storage_type, new_storage_type, new_storage_type, new_storage_type
 
 	if triggered == 'step_3_launch_button' :
+		state_img = html.Img(id='step_3_end_state', src=b64_image(os.path.join('GUI', 'fail'+'.png')), style={'width':'4vh', 'height':'4vh'})
 
-		return no_update, html.Img(id='step_3_end_state', src=b64_image(os.path.join('GUI', 'fail'+'.png')), style={'width':'4vh', 'height':'4vh'})
+		return no_update, state_img, no_update, no_update, no_update, no_update, no_update
 
 # Step 2 and 3 main
 @app.callback(
@@ -8505,12 +8809,50 @@ def download_uniprot_files(final_store):
 # Step 4 enter
 @app.callback(
 	Output('step_4_start_state', 'children'),
+	Output('Figure_code', 'data'),
+	Output('Legend_code', 'data'),
+
 	Input('step_4_launch_button', 'n_clicks'),
+
+	State('Figure_code', 'data'),
+	State('Legend_code', 'data'),
+
+	State('Step_1', 'data'),
+
+	State('sorting_dropdown', 'value'),
+
 	prevent_initial_call=True
 	)
-def download_uniprot_files(button_press):
+def download_uniprot_files(button_press, old_figure_code, old_legend_code, protein_list_data, sorting):
 
-	return html.Img(id='step_4_end_state', src=b64_image(os.path.join('GUI', 'fail'+'.png')), style={'width':'4vh', 'height':'4vh'})
+	# Removing old figures if they exist
+	if old_figure_code != None and os.path.exists(os.path.join('Figures', old_figure_code+'.png')) :
+		os.remove(os.path.join('Figures', old_figure_code+'.png'))
+
+	if old_legend_code != None and os.path.exists(os.path.join('Figures', old_legend_code+'.png')) :
+		os.remove(os.path.join('Figures', old_legend_code+'.png'))
+
+
+	figure_code = str(uuid.uuid4())
+	legend_code = str(uuid.uuid4())
+
+	if not os.path.exists('Pending_map_creation') :
+		print('Creating Pending_map_creation folder')
+		os.mkdir('Pending_map_creation')
+
+	protein_list_df = pd.read_json(protein_list_data, orient='split')
+
+	protein_nb = len(list(protein_list_df['code']))
+	if sorting == 'feature_number_distance' :
+		estimated_time = max(30, int(1.82 * 10**-3 * protein_nb**2 + -0.721*protein_nb + 66))
+	else :
+		estimated_time = 240
+
+	output = open(os.path.join('Pending_map_creation', figure_code+'_'+legend_code+'.txt'), 'w')
+	output.write(str(int(time.time()))+'\t'+str(estimated_time))
+	output.close()
+
+	return html.Img(id='step_4_end_state', src=b64_image(os.path.join('GUI', 'pending'+'.png')), style={'width':'4vh', 'height':'4vh'}), figure_code, legend_code
 
 # Step 4 main
 @app.callback(
@@ -8520,9 +8862,6 @@ def download_uniprot_files(button_press):
 	Output('step_4_end_state', 'src'),
 
 	Output('Sorted_protein_list', 'data'),
-
-	Output('Figure_code', 'data'),
-	Output('Legend_code', 'data'),
 
 	Output('map_download', 'data'),
 	Output('legend_download', 'data'),
@@ -8593,8 +8932,8 @@ def blabla(
 	protein_list_data,
 	pdb_coverage_list,
 
-	old_figure_code,
-	old_legend_code
+	figure_code,
+	legend_code
 	) :
 
 	ctx = dash.callback_context
@@ -8647,7 +8986,9 @@ def blabla(
 		# Make DataFrame from stored feature shape an color data
 		shape_df = pd.read_json(feature_shape, orient='split')
 
-		im_children, legend_children, uuid_im, uuid_legend, sorted_protein_list = drawFigure(
+		im_children, legend_children, sorted_protein_list = drawFigure(
+			figure_code,
+			legend_code,
 			protein_list_df,
 			data_df,
 			shape_df,
@@ -8658,30 +8999,73 @@ def blabla(
 			**parameter_dict
 		)
 
+		# Create a protein name to Uniprot code dict
+		code_name_dict = {}
+		for index, row in protein_list_df.iterrows():
+			protein_name = row['protein']
+			code = row['code']
+			code_name_dict[protein_name] = code
+
+		protein_list_dict = []
+		for protein in sorted_protein_list :
+			associated_code = code_name_dict[protein]
+			protein_list_dict.append({'code' : associated_code, 'protein' : protein})
+
+		protein_list_dict_df = pd.DataFrame.from_dict(protein_list_dict)
+
+		sorted_protein_list_data = protein_list_dict_df.to_json(date_format='iso', orient='split')
+
+		protein_list_dict_df.to_csv(os.path.join('Figures', figure_code+'_'+legend_code+'.csv'), sep='\t', index=False)
+
+
+		os.remove(os.path.join('Pending_map_creation', figure_code+'_'+legend_code+'.txt'))
+
 		end_time = time.time()
 		print('Step 4 execution time:', str(end_time - start_time))
 
-		# Removing old figures if they exist
-		if old_figure_code != None and os.path.exists(os.path.join('Figures', old_figure_code+'.png')) :
-			os.remove(os.path.join('Figures', old_figure_code+'.png'))
-
-		if old_legend_code != None and os.path.exists(os.path.join('Figures', old_legend_code+'.png')) :
-			os.remove(os.path.join('Figures', old_legend_code+'.png'))
-
-		return im_children, legend_children, no_update, b64_image(os.path.join('GUI', 'success'+'.png')), sorted_protein_list, uuid_im, uuid_legend, no_update, no_update #dcc.send_file(os.path.join('Figures', uuid_im+'.png')), dcc.send_file(os.path.join('Figures', uuid_legend+'.png'))
+		return im_children, legend_children, no_update, b64_image(os.path.join('GUI', 'success'+'.png')), sorted_protein_list_data, no_update, no_update
 
 	else :
 
 		im_children = html.Div()
 		legend_children = html.Div()
 
-		if old_figure_code != None and os.path.exists(os.path.join('Figures', old_figure_code+'.png')) :
-			im_children = html.Img(src=b64_image(os.path.join('Figures', old_figure_code+'.png')), style={'width' : '100%', 'display' : 'flex', 'align-items' : 'center', 'justify-content' : 'center'})
+		if figure_code != None and legend_code != None and os.path.exists(os.path.join('Figures', figure_code+'.png')) :
 
-		if old_legend_code != None and os.path.exists(os.path.join('Figures', old_legend_code+'.png')) :
-			legend_children = html.Img(src=b64_image(os.path.join('Figures', old_legend_code+'.png')), style={'width' : '100%', 'display' : 'flex', 'align-items' : 'center', 'justify-content' : 'center'})
+			if figure_code != None and os.path.exists(os.path.join('Figures', figure_code+'.png')) :
+				im_children = html.Img(src=b64_image(os.path.join('Figures', figure_code+'.png')), style={'width' : '100%', 'display' : 'flex', 'align-items' : 'center', 'justify-content' : 'center'})
 
-		return im_children, legend_children, no_update, no_update, no_update, no_update, no_update, no_update, no_update
+			if legend_code != None and os.path.exists(os.path.join('Figures', legend_code+'.png')) :
+				legend_children = html.Img(src=b64_image(os.path.join('Figures', legend_code+'.png')), style={'width' : '100%', 'display' : 'flex', 'align-items' : 'center', 'justify-content' : 'center'})
+
+			if os.path.exists(os.path.join('Figures', figure_code+'_'+legend_code+'.csv')) :
+				sorted_protein_list = pd.read_csv(os.path.join('Figures', figure_code+'_'+legend_code+'.csv'), sep='\t')
+				sorted_protein_list_data = sorted_protein_list.to_json(date_format='iso', orient='split')
+				os.remove(os.path.join('Figures', figure_code+'_'+legend_code+'.csv'))
+			else :
+				sorted_protein_list_data = None
+
+			return im_children, legend_children, no_update, b64_image(os.path.join('GUI', 'success'+'.png')), sorted_protein_list_data, no_update, no_update
+			
+
+		if figure_code != None and legend_code != None and os.path.exists(os.path.join('Pending_map_creation', figure_code+'_'+legend_code+'.txt')) :
+
+			for line in open(os.path.join('Pending_map_creation', figure_code+'_'+legend_code+'.txt')) :
+				sline = line.strip().split('\t')
+				starting_time = int(sline[0])
+				estimated_time = 2 * int(sline[1]) # multiplied by 2 to be sure process is finished
+				actual_time = int(time.time())
+
+				if actual_time > starting_time + estimated_time :
+					os.remove(os.path.join('Pending_map_creation', figure_code+'_'+legend_code+'.txt'))
+
+					return im_children, legend_children, no_update, b64_image(os.path.join('GUI', 'fail'+'.png')), no_update, no_update, no_update
+				else :
+					return im_children, legend_children, no_update, b64_image(os.path.join('GUI', 'pending'+'.png')), no_update, no_update, no_update
+
+		return im_children, legend_children, no_update, no_update, no_update, no_update, no_update
+
+
 
 @app.callback(
 	Output('auto_toggle_1', 'value'),
@@ -8752,7 +9136,6 @@ def main(x1, x2) :
 	State('uniform_toggles', 'value'),
 
 	State('pensize', 'value'),
-	State('sorting_dropdown', 'value'),
 	State('FT_order_list', 'value'),
 
 	State('quick_run_collapse', 'is_open'),
@@ -8781,7 +9164,6 @@ def download_uniprot_files(
 	uniform_toggles,
 
 	pensize,
-	sorting_dropdown,
 	FT_order_list,
 
 	quick_run_collapse
@@ -8808,7 +9190,7 @@ def download_uniprot_files(
 		protein_length_df, protein_occurrence_df, pdb_list_df, coverage_df, db_coverage_df, features_df, protein_seq_str = featureExtraction(complete_protein_list_df)
 		print('Quiting: Data extraction...')
 		print('Entering: Auto feature choice...')
-		shape_df = autoFeatChoice(protein_occurrence_df)
+		shape_df = autoFeatChoice(protein_occurrence_df, auto_toggle='more than x', auto_select_threshold=None)
 		print(shape_df)
 		print('Quiting: Auto feature choice...')
 		print('Entering: Map creation...')
@@ -8817,7 +9199,7 @@ def download_uniprot_files(
 			length_factor, 
 			height, 
 			text_size,
-			sorting_dropdown, 
+			'feature_number_distance', 
 			None, 
 			None, 
 			biased_region_text_size, 
@@ -8831,7 +9213,12 @@ def download_uniprot_files(
 			pensize, 
 			FT_order_list)
 
-		im_children, legend_children, uuid_im, uuid_legend, sorted_protein_list = drawFigure(
+		figure_code = str(uuid.uuid4())
+		legend_code = str(uuid.uuid4())
+
+		im_children, legend_children, sorted_protein_list = drawFigure(
+			figure_code,
+			legend_code,
 			complete_protein_list_df,
 			features_df,
 			shape_df,
@@ -8843,7 +9230,7 @@ def download_uniprot_files(
 		)
 		print('Quiting: Map creation...')
 
-		return uuid_im, uuid_legend, im_children, legend_children, True, no_update
+		return figure_code, legend_code, im_children, legend_children, True, no_update
 
 	else :
 		return no_update, no_update, no_update, no_update, False, no_update
